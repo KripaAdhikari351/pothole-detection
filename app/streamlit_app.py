@@ -113,6 +113,11 @@ page = st.sidebar.radio("Navigate", ["Live Detection", "Government Portal"])
 if page == "Live Detection":
     st.title("Pothole Detection System")
 
+    if not os.path.exists(MODEL_PATH):
+        st.error(f"No trained model found at {MODEL_PATH}")
+        st.info("Run training/train_model.py first, or point MODEL_PATH at any YOLOv8 .pt file trained on a pothole dataset.")
+        st.stop()
+
     model = load_model()
     location = st.sidebar.text_input("Road / location description", "MG Road, near KM 4 marker")
 
