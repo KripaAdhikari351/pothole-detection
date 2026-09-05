@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+runs/
+raw_data/
+pothole_dataset/
+captured_frames/
+reported_images/
+gov_reports.db
+*.onnx
+*.pt
+.DS_Store

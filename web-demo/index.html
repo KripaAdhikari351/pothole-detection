@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pothole Detection</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-sidebar:#F0F2F6;
+    --bg-main:#FFFFFF;
+    --text:#31333F;
+    --text-muted:#6B7280;
+    --border:#E3E6EB;
+    --primary:#FF4B4B;
+    --primary-dark:#E03C3C;
+    --red-bg:#FFE9E9;
+    --red-text:#7D1A1A;
+    --green-bg:#E3F6E9;
+    --green-text:#1E4620;
+    --info-bg:#EEF1FD;
+    --info-text:#39457A;
+    --font:'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:var(--font); color:var(--text); background:#fff; }
+  .app{ display:flex; min-height:600px; }
+
+  .sidebar{
+    width:280px; flex-shrink:0; background:var(--bg-sidebar); border-right:1px solid var(--border);
+    padding:24px 20px; display:flex; flex-direction:column; gap:20px;
+  }
+  .side-label{ font-size:13px; font-weight:600; color:var(--text); margin-bottom:8px; }
+  .radio-group{ display:flex; flex-direction:column; gap:8px; }
+  .radio-opt{ display:flex; align-items:center; gap:8px; font-size:14px; color:var(--text); cursor:pointer; }
+  .radio-opt input{ accent-color:var(--primary); width:16px; height:16px; }
+
+  .side-section{ border-top:1px solid var(--border); padding-top:18px; display:flex; flex-direction:column; gap:16px; }
+  .side-field label{ display:block; font-size:13px; color:var(--text); margin-bottom:6px; font-weight:600; }
+  .side-field input[type=text]{
+    width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:#fff;
+    color:var(--text); font-size:14px; font-family:var(--font);
+  }
+  .side-field input[type=text]:focus{ outline:none; border-color:var(--primary); box-shadow:0 0 0 1px var(--primary); }
+
+  .dropzone{
+    border:1.5px dashed var(--border); border-radius:6px; padding:16px; text-align:center; font-size:13px;
+    color:var(--text-muted); cursor:pointer; background:#FAFAFA; transition:border-color .15s, background .15s;
+  }
+  .dropzone:hover{ border-color:var(--primary); background:#fff; }
+  .file-name{ font-size:12.5px; color:var(--text-muted); margin-top:6px; word-break:break-all; }
+
+  .btn{
+    all:unset; box-sizing:border-box; cursor:pointer; text-align:center; padding:9px 16px; border-radius:6px;
+    font-size:14px; font-weight:600; font-family:var(--font); transition:background .15s, border-color .15s, color .15s, transform .08s;
+  }
+  .btn:active{ transform:scale(0.97); }
+  .btn-primary{ background:var(--primary); color:#fff; }
+  .btn-primary:hover{ background:var(--primary-dark); }
+  .btn-outline{ border:1px solid var(--border); color:var(--text); background:#fff; }
+  .btn-outline:hover{ border-color:var(--primary); color:var(--primary); }
+  .btn-stop{ border:1px solid var(--primary); color:var(--primary); background:#fff; }
+  .btn-stop:hover{ background:var(--red-bg); }
+  .btn:disabled{ opacity:0.5; cursor:not-allowed; }
+  .btn-row{ display:flex; gap:8px; }
+
+  .main{ flex:1; padding:32px 40px 50px; max-width:900px; }
+  .masthead{ margin-bottom:6px; }
+  h1{ font-size:2.1rem; font-weight:700; margin:0 0 8px; color:var(--text); letter-spacing:-0.5px; }
+  .masthead p{ font-size:15px; color:var(--text-muted); max-width:640px; line-height:1.6; margin:0; }
+
+  .detect-badge{
+    display:inline-flex; align-items:center; gap:8px; background:#fff; border:1px solid var(--border);
+    border-radius:6px; padding:10px 16px; margin:18px 0; font-size:14px; color:var(--text-muted);
+  }
+  .detect-badge b{ font-size:18px; color:var(--text); display:inline-block; transition:transform .2s, color .2s; }
+  .detect-badge b.bump{ transform:scale(1.35); color:var(--primary); }
+
+  .panel{ background:var(--bg-main); border:1px solid var(--border); border-radius:8px; overflow:hidden; margin-bottom:20px; }
+  .stage{ position:relative; background:#F5F5F7; min-height:320px; display:flex; align-items:center; justify-content:center; }
+  .stage video, .stage canvas, .stage img{ max-width:100%; display:block; }
+  .stage-empty{ color:var(--text-muted); font-size:14px; text-align:center; padding:40px; }
+
+  .live-tag{
+    position:absolute; top:12px; left:12px; display:none; align-items:center; gap:6px; background:rgba(0,0,0,0.55);
+    color:#fff; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:700; letter-spacing:0.4px;
+  }
+  .live-tag.show{ display:flex; }
+  .live-dot{ width:7px; height:7px; border-radius:50%; background:#FF4B4B; animation:pulseDot 1.2s infinite; }
+  @keyframes pulseDot{ 0%,100%{opacity:1;} 50%{opacity:0.25;} }
+
+  .alert-bar{ display:none; align-items:center; gap:10px; padding:14px 18px; font-size:14.5px; font-weight:600; border-top:1px solid var(--border); }
+  .alert-bar.show{ display:flex; }
+  .alert-bar.danger{ background:var(--red-bg); color:var(--red-text); animation:pulseBar 1.4s infinite; }
+  .alert-bar.ok{ background:var(--green-bg); color:var(--green-text); }
+  .alert-bar.info{ background:var(--info-bg); color:var(--info-text); }
+  .alert-dot{ width:8px; height:8px; border-radius:50%; background:currentColor; flex-shrink:0; }
+  @keyframes pulseBar{ 0%,100%{ box-shadow:0 0 0 0 rgba(255,75,75,0);} 50%{ box-shadow:0 0 0 6px rgba(255,75,75,0.10);} }
+
+  .control-row{ display:flex; gap:10px; padding:14px 18px; border-top:1px solid var(--border); flex-wrap:wrap; }
+  .control-row .btn{ padding:8px 14px; font-size:13.5px; }
+
+  .frames-strip{ display:flex; gap:10px; flex-wrap:wrap; padding:14px 18px; }
+  .frames-strip .frame-thumb{ text-align:center; }
+  .frames-strip img{ width:96px; height:64px; object-fit:cover; border-radius:6px; border:1px solid var(--border); }
+  .frames-strip a{ display:block; font-size:11px; color:var(--primary); margin-top:4px; text-decoration:none; }
+  .section-label{ font-size:12.5px; font-weight:600; color:var(--text-muted); padding:12px 18px 0; }
+
+  .portal-stats{ display:flex; gap:14px; margin-bottom:22px; flex-wrap:wrap; }
+  .stat-card{ background:#fff; border:1px solid var(--border); border-radius:8px; padding:16px 20px; flex:1; min-width:140px; }
+  .stat-num{ font-size:26px; font-weight:700; color:var(--text); }
+  .stat-label{ font-size:12.5px; color:var(--text-muted); margin-top:3px; }
+
+  .report-row{
+    display:flex; flex-direction:column; gap:10px; padding:16px 18px; border:1px solid var(--border); border-radius:8px;
+    background:#fff; margin-bottom:12px; animation:fadeInUp .3s ease;
+  }
+  @keyframes fadeInUp{ from{ opacity:0; transform:translateY(6px);} to{ opacity:1; transform:translateY(0);} }
+  .report-top{ display:flex; gap:16px; align-items:center; }
+  .report-row img{ width:110px; height:74px; object-fit:cover; border-radius:6px; flex-shrink:0; background:#eee; }
+  .report-main{ flex:1; min-width:0; }
+  .report-id{ font-size:12px; color:var(--primary); font-weight:700; letter-spacing:0.2px; }
+  .report-loc{ font-size:15px; font-weight:600; margin:2px 0; color:var(--text); }
+  .report-meta{ font-size:12.5px; color:var(--text-muted); }
+  select.status-select{
+    padding:7px 10px; border-radius:6px; border:1px solid var(--border); font-family:var(--font); font-size:13px;
+    background:#fff;
+  }
+  .complaint-box{
+    padding:10px 12px; background:#FAFAFA; border:1px solid var(--border); border-left:3px solid var(--primary);
+    font-size:12px; color:var(--text); font-family:ui-monospace, SFMono-Regular, Menlo, monospace;
+    line-height:1.55; white-space:pre-wrap; border-radius:4px;
+  }
+  .empty-state{
+    text-align:center; padding:60px 20px; color:var(--text-muted); border:1px dashed var(--border); border-radius:8px;
+  }
+
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,0.4); display:none; align-items:center; justify-content:center;
+    z-index:50; padding:20px;
+  }
+  .modal-overlay.show{ display:flex; animation:fadeIn .15s ease; }
+  @keyframes fadeIn{ from{opacity:0;} to{opacity:1;} }
+  .modal-box{
+    background:#fff; border-radius:10px; max-width:380px; width:100%; padding:24px;
+    box-shadow:0 14px 38px rgba(0,0,0,0.22); animation:popIn .18s ease;
+  }
+  @keyframes popIn{ from{ opacity:0; transform:scale(0.95);} to{ opacity:1; transform:scale(1);} }
+  .modal-box img{ width:100%; height:180px; object-fit:cover; border-radius:6px; margin-bottom:14px; border:1px solid var(--border); }
+  .modal-title{ font-size:19px; font-weight:700; margin:0 0 6px; color:var(--text); }
+  .modal-text{ font-size:13px; color:var(--text-muted); margin:0 0 4px; }
+  .modal-question{ font-size:14.5px; color:var(--text); margin:10px 0 16px; }
+  .modal-actions{ display:flex; gap:10px; }
+  .modal-actions .btn{ flex:1; padding:10px; text-align:center; }
+  .modal-status{ font-size:12px; color:var(--text-muted); margin-top:12px; min-height:16px; }
+
+  @media (max-width:760px){
+    .app{ flex-direction:column; }
+    .sidebar{ width:100%; }
+    .main{ padding:24px 18px 40px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar">
+    <div>
+      <div class="side-label">Navigate</div>
+      <div class="radio-group">
+        <label class="radio-opt"><input type="radio" name="navPage" value="live" checked> Live Detection</label>
+        <label class="radio-opt"><input type="radio" name="navPage" value="portal"> Government Portal</label>
+      </div>
+    </div>
+
+    <div id="live-controls">
+      <div class="side-section">
+        <div class="side-field">
+          <label for="locationInput">Road / location description</label>
+          <input type="text" id="locationInput" value="MG Road, near KM 4 marker">
+        </div>
+
+        <div>
+          <div class="side-label">Input settings</div>
+          <div class="radio-group" id="inputModeGroup">
+            <label class="radio-opt"><input type="radio" name="inputMode" value="image" checked> Image</label>
+            <label class="radio-opt"><input type="radio" name="inputMode" value="video"> Video</label>
+            <label class="radio-opt"><input type="radio" name="inputMode" value="camera"> Camera</label>
+          </div>
+        </div>
+
+        <div id="autoReportField" style="display:none;">
+          <label class="radio-opt"><input type="checkbox" id="autoReportToggle" checked> Ask to report detections</label>
+        </div>
+
+        <div id="uploadArea">
+          <div class="dropzone" id="dropzone">Click to upload an image</div>
+          <input type="file" id="fileInput" accept="image/*" style="display:none">
+          <div class="file-name" id="fileName"></div>
+        </div>
+
+        <div id="cameraArea" style="display:none;">
+          <div class="btn-row">
+            <button class="btn btn-primary" id="startCamBtn" style="flex:1;">Start camera</button>
+            <button class="btn btn-stop" id="stopCamBtn" style="flex:1; display:none;">Stop</button>
+          </div>
+          <div class="file-name" id="camStatus"></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <section id="page-live">
+      <div class="masthead">
+        <h1>Pothole Detection</h1>
+        <p>Detects potholes from an image, uploaded video, or live camera feed. When a pothole is found, you'll be asked whether to file a report with the municipal road maintenance portal.</p>
+      </div>
+
+      <div class="detect-badge">Potholes detected this session: <b id="detectCount">0</b></div>
+
+      <div class="panel">
+        <div class="stage" id="stage">
+          <div class="stage-empty" id="stageEmpty">Choose an input on the left to begin</div>
+          <div class="live-tag" id="liveTag"><span class="live-dot"></span>LIVE</div>
+          <video id="video" autoplay playsinline muted style="display:none;"></video>
+          <canvas id="mainCanvas" style="display:none;"></canvas>
+        </div>
+        <div class="alert-bar" id="alertBar"><span class="alert-dot"></span><span id="alertText"></span></div>
+        <div class="control-row" id="controlRow" style="display:none;">
+          <button class="btn btn-outline" id="extractFrameBtn">Extract frame</button>
+          <button class="btn btn-primary" id="rerunBtn">Run detection</button>
+        </div>
+      </div>
+
+      <div class="panel" id="framesPanel" style="display:none;">
+        <div class="section-label">Extracted frames (dataset capture)</div>
+        <div class="frames-strip" id="framesStrip"></div>
+      </div>
+    </section>
+
+    <section id="page-portal" style="display:none;">
+      <div class="masthead">
+        <h1>Municipal Road Maintenance Portal</h1>
+        <p>Public dashboard of potholes automatically reported by RoadWatch cameras this session.</p>
+      </div>
+
+      <div class="portal-stats">
+        <div class="stat-card">
+          <div class="stat-num" id="statDetected">0</div>
+          <div class="stat-label">Potholes detected (session)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="statTotal">0</div>
+          <div class="stat-label">Total reports filed</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="statPending">0</div>
+          <div class="stat-label">Pending review</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="statRepaired">0</div>
+          <div class="stat-label">Repaired</div>
+        </div>
+      </div>
+
+      <div id="reportsList"></div>
+      <div class="empty-state" id="emptyState">No potholes reported yet. Run a detection to file a report.</div>
+    </section>
+
+  </main>
+</div>
+
+<div class="modal-overlay" id="reportModal">
+  <div class="modal-box">
+    <img id="modalThumb" src="" alt="Detected frame">
+    <div class="modal-title">Pothole detected</div>
+    <div class="modal-text" id="modalConfidenceText"></div>
+    <div class="modal-question">Report this to the Department of Public Works?</div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="modalNoBtn">No, dismiss</button>
+      <button class="btn btn-primary" id="modalYesBtn">Yes, report it</button>
+    </div>
+    <div class="modal-status" id="modalStatus"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  let currentPage = 'live';
+  let inputMode = 'image';
+  let reports = [];
+  let detections = [];
+  let detectionCount = 0;
+  let reportSeq = 0;
+  let stream = null;
+  let cameraLoopId = null;
+  let videoLoopActive = false;
+  let currentSourceType = null;
+  let popupOpen = false;
+  let pendingDetection = null;
+
+  let trackedBbox = null;
+  let trackedConfidence = 0;
+  let stableFrames = 0;
+  let trackPrompted = false;
+  const STABLE_FRAMES_REQUIRED = 3;
+  const TRACK_IOU_THRESHOLD = 0.2;
+  const SMOOTH_ALPHA = 0.35;
+
+  const video = document.getElementById('video');
+  const mainCanvas = document.getElementById('mainCanvas');
+  const mctx = mainCanvas.getContext('2d');
+  const stageEmpty = document.getElementById('stageEmpty');
+  const liveTag = document.getElementById('liveTag');
+  const alertBar = document.getElementById('alertBar');
+  const alertText = document.getElementById('alertText');
+  const controlRow = document.getElementById('controlRow');
+  const framesPanel = document.getElementById('framesPanel');
+  const framesStrip = document.getElementById('framesStrip');
+  const locationInput = document.getElementById('locationInput');
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const fileName = document.getElementById('fileName');
+  const uploadArea = document.getElementById('uploadArea');
+  const cameraArea = document.getElementById('cameraArea');
+  const startCamBtn = document.getElementById('startCamBtn');
+  const stopCamBtn = document.getElementById('stopCamBtn');
+  const camStatus = document.getElementById('camStatus');
+  const detectCountEl = document.getElementById('detectCount');
+  const reportModal = document.getElementById('reportModal');
+  const modalThumb = document.getElementById('modalThumb');
+  const modalConfidenceText = document.getElementById('modalConfidenceText');
+  const modalYesBtn = document.getElementById('modalYesBtn');
+  const modalNoBtn = document.getElementById('modalNoBtn');
+  const modalStatus = document.getElementById('modalStatus');
+  const autoReportField = document.getElementById('autoReportField');
+  const autoReportToggle = document.getElementById('autoReportToggle');
+
+  const smallCanvas = document.createElement('canvas');
+  smallCanvas.width = 220; smallCanvas.height = 124;
+  const sctx = smallCanvas.getContext('2d', { willReadFrequently: true });
+
+  document.querySelectorAll('input[name=navPage]').forEach(r => {
+    r.addEventListener('change', (e) => switchPage(e.target.value));
+  });
+
+  function switchPage(page){
+    currentPage = page;
+    document.getElementById('page-live').style.display = page==='live' ? '' : 'none';
+    document.getElementById('page-portal').style.display = page==='portal' ? '' : 'none';
+    document.getElementById('live-controls').style.display = page==='live' ? '' : 'none';
+    if(page==='portal') renderReports();
+  }
+
+  document.querySelectorAll('input[name=inputMode]').forEach(r => {
+    r.addEventListener('change', (e) => {
+      inputMode = e.target.value;
+      stopCamera();
+      resetStage();
+      autoReportField.style.display = (inputMode === 'video' || inputMode === 'camera') ? '' : 'none';
+      if(inputMode === 'camera'){
+        uploadArea.style.display = 'none';
+        cameraArea.style.display = '';
+      } else {
+        uploadArea.style.display = '';
+        cameraArea.style.display = 'none';
+        dropzone.textContent = inputMode === 'image' ? 'Click to upload an image' : 'Click to upload a video';
+        fileInput.accept = inputMode === 'image' ? 'image/*' : 'video/*';
+        fileName.textContent = '';
+      }
+    });
+  });
+
+  function resetStage(){
+    stageEmpty.style.display = '';
+    video.style.display = 'none';
+    mainCanvas.style.display = 'none';
+    liveTag.classList.remove('show');
+    alertBar.classList.remove('show');
+    controlRow.style.display = 'none';
+    currentSourceType = null;
+    resetTracking();
+  }
+
+  function resetTracking(){
+    trackedBbox = null;
+    trackedConfidence = 0;
+    stableFrames = 0;
+    trackPrompted = false;
+  }
+
+  dropzone.onclick = () => fileInput.click();
+  fileInput.onchange = () => {
+    const f = fileInput.files[0];
+    if(!f) return;
+    fileName.textContent = f.name;
+    const url = URL.createObjectURL(f);
+    if(inputMode === 'image'){
+      loadImage(url);
+    } else {
+      loadVideoFile(url);
+    }
+  };
+
+  function loadImage(url){
+    const img = new Image();
+    img.onload = () => {
+      currentSourceType = 'image';
+      resetTracking();
+      stageEmpty.style.display = 'none';
+      liveTag.classList.remove('show');
+      mainCanvas.style.display = 'block';
+      video.style.display = 'none';
+      const w = Math.min(760, img.width);
+      const h = Math.round(img.height * (w / img.width));
+      mainCanvas.width = w; mainCanvas.height = h;
+      mctx.drawImage(img, 0, 0, w, h);
+      controlRow.style.display = 'flex';
+      analyzeCurrentFrame(true);
+    };
+    img.src = url;
+  }
+
+  function loadVideoFile(url){
+    currentSourceType = 'video';
+    resetTracking();
+    stageEmpty.style.display = 'none';
+    video.style.display = 'none';
+    mainCanvas.style.display = 'block';
+    video.srcObject = null;
+    video.src = url;
+    video.loop = true;
+    video.muted = true;
+    video.play();
+    controlRow.style.display = 'flex';
+    video.onloadedmetadata = () => {
+      liveTag.classList.add('show');
+      startVideoAnalysisLoop();
+    };
+  }
+
+  function startVideoAnalysisLoop(){
+    videoLoopActive = true;
+    const tick = () => {
+      if(!videoLoopActive || currentSourceType !== 'video') return;
+      analyzeCurrentFrame(false);
+      setTimeout(tick, 280);
+    };
+    tick();
+  }
+
+  startCamBtn.onclick = async () => {
+    try{
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio:false });
+      video.srcObject = stream;
+      video.src = '';
+      currentSourceType = 'camera';
+      resetTracking();
+      stageEmpty.style.display = 'none';
+      video.style.display = 'none';
+      mainCanvas.style.display = 'block';
+      controlRow.style.display = 'flex';
+      startCamBtn.style.display = 'none';
+      stopCamBtn.style.display = '';
+      camStatus.textContent = 'Camera live';
+      liveTag.classList.add('show');
+      video.onloadedmetadata = () => startCameraAnalysisLoop();
+    }catch(err){
+      camStatus.textContent = 'Camera unavailable in this preview (permission blocked). Try Image or Video input instead.';
+    }
+  };
+
+  stopCamBtn.onclick = stopCamera;
+
+  function stopCamera(){
+    if(stream){
+      stream.getTracks().forEach(t => t.stop());
+      stream = null;
+    }
+    if(cameraLoopId) clearTimeout(cameraLoopId);
+    videoLoopActive = false;
+    startCamBtn.style.display = '';
+    stopCamBtn.style.display = 'none';
+    camStatus.textContent = '';
+    liveTag.classList.remove('show');
+  }
+
+  function startCameraAnalysisLoop(){
+    const tick = () => {
+      if(currentSourceType !== 'camera' || !stream) return;
+      analyzeCurrentFrame(false);
+      cameraLoopId = setTimeout(tick, 280);
+    };
+    tick();
+  }
+
+  document.getElementById('extractFrameBtn').onclick = () => {
+    const src = currentSourceType === 'image' ? mainCanvas : video;
+    if(!src || (currentSourceType!=='image' && !video.videoWidth)) return;
+    const w = currentSourceType === 'image' ? mainCanvas.width : video.videoWidth;
+    const h = currentSourceType === 'image' ? mainCanvas.height : video.videoHeight;
+    const tmp = document.createElement('canvas');
+    tmp.width = w; tmp.height = h;
+    tmp.getContext('2d').drawImage(src, 0, 0, w, h);
+    const dataUrl = tmp.toDataURL('image/jpeg', 0.85);
+    addExtractedFrame(dataUrl);
+  };
+
+  function addExtractedFrame(dataUrl){
+    framesPanel.style.display = '';
+    const wrap = document.createElement('div');
+    wrap.className = 'frame-thumb';
+    const img = document.createElement('img');
+    img.src = dataUrl;
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = 'frame_' + Date.now() + '.jpg';
+    a.textContent = 'download';
+    wrap.appendChild(img);
+    wrap.appendChild(a);
+    framesStrip.insertBefore(wrap, framesStrip.firstChild);
+  }
+
+  document.getElementById('rerunBtn').onclick = () => analyzeCurrentFrame(true);
+
+  function analyzeCurrentFrame(forceLog){
+    let sw, sh;
+    if(currentSourceType === 'image'){
+      sw = mainCanvas.width; sh = mainCanvas.height;
+    } else {
+      if(!video.videoWidth) return;
+      sw = video.videoWidth; sh = video.videoHeight;
+      mainCanvas.width = sw; mainCanvas.height = sh;
+      mctx.drawImage(video, 0, 0, sw, sh);
+    }
+
+    const cw = 220;
+    const ch = Math.max(70, Math.round(cw * sh / sw));
+    if(smallCanvas.width !== cw || smallCanvas.height !== ch){
+      smallCanvas.width = cw; smallCanvas.height = ch;
+    }
+    sctx.drawImage(currentSourceType === 'image' ? mainCanvas : video, 0, 0, cw, ch);
+
+    const raw = detectPotholeRaw(sctx, cw, ch);
+
+    if(currentSourceType !== 'image'){
+      mctx.drawImage(video, 0, 0, sw, sh);
+    }
+
+    if(currentSourceType === 'image'){
+      if(raw){
+        trackedBbox = raw.bbox;
+        trackedConfidence = raw.confidence;
+        stableFrames = STABLE_FRAMES_REQUIRED;
+      } else {
+        resetTracking();
+      }
+    } else {
+      updateTracking(raw);
+    }
+
+    const confirmed = stableFrames >= STABLE_FRAMES_REQUIRED && trackedBbox;
+
+    if(confirmed){
+      const [bx, by, bw, bh] = trackedBbox;
+      const x = bx * sw, y = by * sh, w = bw * sw, h = bh * sh;
+      mctx.strokeStyle = '#2E9E4C';
+      mctx.lineWidth = Math.max(2, sw*0.004);
+      mctx.strokeRect(x, y, w, h);
+      mctx.font = `${Math.max(14, sw*0.02)}px 'Source Sans 3', sans-serif`;
+      mctx.fillStyle = '#2E9E4C';
+      const label = `pothole ${trackedConfidence.toFixed(2)}`;
+      const tw = mctx.measureText(label).width;
+      mctx.fillRect(x, Math.max(0,y-20), tw+10, 20);
+      mctx.fillStyle = '#fff';
+      mctx.fillText(label, x+5, Math.max(14,y-5));
+
+      showAlert('danger', `POTHOLE DETECTED — confidence ${trackedConfidence.toFixed(2)}`);
+
+      const autoReportOn = currentSourceType === 'image' ? true : autoReportToggle.checked;
+      const alreadyPrompted = currentSourceType === 'image' ? false : trackPrompted;
+
+      if(autoReportOn && !popupOpen && !alreadyPrompted){
+        if(currentSourceType !== 'image') trackPrompted = true;
+        detectionCount++;
+        detectCountEl.textContent = detectionCount;
+        detectCountEl.classList.add('bump');
+        setTimeout(() => detectCountEl.classList.remove('bump'), 300);
+        pendingDetection = {
+          confidence: trackedConfidence,
+          thumb: mainCanvas.toDataURL('image/jpeg', 0.8),
+          timestamp: new Date().toLocaleString()
+        };
+        detections.push(pendingDetection);
+        openReportPopup();
+      }
+    } else if(raw && stableFrames > 0){
+      showAlert('info', 'Possible pothole — confirming position…');
+    } else {
+      showAlert('ok', 'Road looks clear');
+    }
+  }
+
+  function showAlert(state, text){
+    alertBar.classList.add('show');
+    alertBar.classList.remove('danger', 'ok', 'info');
+    alertBar.classList.add(state);
+    alertText.textContent = text;
+  }
+
+  function updateTracking(raw){
+    if(!raw){
+      stableFrames = Math.max(0, stableFrames - 1);
+      if(stableFrames === 0){
+        trackedBbox = null;
+        trackPrompted = false;
+      }
+      return;
+    }
+    if(trackedBbox && iou(trackedBbox, raw.bbox) > TRACK_IOU_THRESHOLD){
+      trackedBbox = trackedBbox.map((v, i) => v + (raw.bbox[i] - v) * SMOOTH_ALPHA);
+      trackedConfidence = trackedConfidence + (raw.confidence - trackedConfidence) * SMOOTH_ALPHA;
+      stableFrames = Math.min(STABLE_FRAMES_REQUIRED, stableFrames + 1);
+    } else {
+      trackedBbox = raw.bbox.slice();
+      trackedConfidence = raw.confidence;
+      stableFrames = 1;
+      trackPrompted = false;
+    }
+  }
+
+  function iou(a, b){
+    const ax2 = a[0]+a[2], ay2 = a[1]+a[3], bx2 = b[0]+b[2], by2 = b[1]+b[3];
+    const ix1 = Math.max(a[0], b[0]), iy1 = Math.max(a[1], b[1]);
+    const ix2 = Math.min(ax2, bx2), iy2 = Math.min(ay2, by2);
+    const iw = Math.max(0, ix2-ix1), ih = Math.max(0, iy2-iy1);
+    const inter = iw*ih;
+    const union = a[2]*a[3] + b[2]*b[3] - inter;
+    return union > 0 ? inter/union : 0;
+  }
+
+  function detectPotholeRaw(ctx, w, h){
+    const data = ctx.getImageData(0, 0, w, h).data;
+    const gray = new Float32Array(w*h);
+    for(let i=0;i<w*h;i++){
+      gray[i] = 0.299*data[i*4] + 0.587*data[i*4+1] + 0.114*data[i*4+2];
+    }
+
+    const yStart = Math.floor(h*0.32);
+
+    const mask = localThresholdMask(gray, w, h, yStart);
+    const cleaned = morphClose(mask, w, h);
+    const best = connectedComponents(cleaned, w, h, yStart);
+
+    if(!best) return null;
+    const confidence = Math.min(0.95, 0.4 + (best.area/(w*h))*3.2);
+    return {
+      confidence,
+      bbox: [best.minX/w, best.minY/h, best.bw/w, best.bh/h]
+    };
+  }
+
+  function localThresholdMask(gray, w, h, yStart, blockSize=22, delta=22){
+    const cols = Math.ceil(w/blockSize), rows = Math.ceil((h-yStart)/blockSize);
+    const blockSum = new Float32Array(cols*rows);
+    const blockCount = new Int32Array(cols*rows);
+    for(let y=yStart;y<h;y++){
+      for(let x=0;x<w;x++){
+        const bx = Math.min(cols-1, Math.floor(x/blockSize));
+        const by = Math.min(rows-1, Math.floor((y-yStart)/blockSize));
+        const bidx = by*cols+bx;
+        blockSum[bidx] += gray[y*w+x];
+        blockCount[bidx]++;
+      }
+    }
+    const blockMean = new Float32Array(cols*rows);
+    for(let i=0;i<cols*rows;i++) blockMean[i] = blockCount[i] ? blockSum[i]/blockCount[i] : 255;
+
+    const mask = new Uint8Array(w*h);
+    for(let y=yStart;y<h;y++){
+      for(let x=0;x<w;x++){
+        const bx = Math.min(cols-1, Math.floor(x/blockSize));
+        const by = Math.min(rows-1, Math.floor((y-yStart)/blockSize));
+        const localThresh = blockMean[by*cols+bx] - delta;
+        if(gray[y*w+x] <= localThresh) mask[y*w+x] = 1;
+      }
+    }
+    return mask;
+  }
+
+  function morphClose(mask, w, h){
+    const dilated = new Uint8Array(w*h);
+    for(let y=0;y<h;y++){
+      for(let x=0;x<w;x++){
+        const idx = y*w+x;
+        if(mask[idx]){ dilated[idx]=1; continue; }
+        let any=0;
+        if(x>0 && mask[idx-1]) any=1;
+        else if(x<w-1 && mask[idx+1]) any=1;
+        else if(y>0 && mask[idx-w]) any=1;
+        else if(y<h-1 && mask[idx+w]) any=1;
+        dilated[idx]=any;
+      }
+    }
+    const eroded = new Uint8Array(w*h);
+    for(let y=0;y<h;y++){
+      for(let x=0;x<w;x++){
+        const idx = y*w+x;
+        if(!dilated[idx]){ eroded[idx]=0; continue; }
+        if(x===0||x===w-1||y===0||y===h-1){ eroded[idx]=dilated[idx]; continue; }
+        eroded[idx] = (dilated[idx-1] && dilated[idx+1] && dilated[idx-w] && dilated[idx+w]) ? 1 : 0;
+      }
+    }
+    return eroded;
+  }
+
+  function connectedComponents(mask, w, h, yStart){
+    const visited = new Uint8Array(w*h);
+    let best = null;
+    for(let y=yStart;y<h;y++){
+      for(let x=0;x<w;x++){
+        const idx = y*w+x;
+        if(visited[idx] || !mask[idx]){ visited[idx]=1; continue; }
+
+        let minX=x,maxX=x,minY=y,maxY=y,area=0;
+        const stack=[idx];
+        visited[idx]=1;
+        while(stack.length){
+          const cur = stack.pop();
+          const cx = cur % w, cy = (cur / w) | 0;
+          area++;
+          if(cx<minX)minX=cx; if(cx>maxX)maxX=cx;
+          if(cy<minY)minY=cy; if(cy>maxY)maxY=cy;
+          const candidates = [
+            [cur-1, cx-1, cy], [cur+1, cx+1, cy], [cur-w, cx, cy-1], [cur+w, cx, cy+1]
+          ];
+          for(const [n, nx, ny] of candidates){
+            if(nx<0||nx>=w||ny<0||ny>=h) continue;
+            if(visited[n]) continue;
+            if(mask[n]){ visited[n]=1; stack.push(n); } else visited[n]=1;
+          }
+        }
+
+        const bw = maxX-minX+1, bh = maxY-minY+1;
+        const areaRatio = area/(w*h);
+        const fillRatio = area/(bw*bh);
+        if(area>=18 && areaRatio<0.3 && fillRatio>0.32 && bw>=4 && bh>=4){
+          if(!best || area>best.area) best = {minX,minY,maxX,maxY,area,bw,bh};
+        }
+      }
+    }
+    return best;
+  }
+
+  function openReportPopup(){
+    popupOpen = true;
+    modalThumb.src = pendingDetection.thumb;
+    modalConfidenceText.textContent = `Confidence ${pendingDetection.confidence.toFixed(2)} · detected ${pendingDetection.timestamp}`;
+    modalStatus.textContent = '';
+    modalYesBtn.disabled = false;
+    modalNoBtn.disabled = false;
+    reportModal.classList.add('show');
+  }
+
+  function closeReportPopup(){
+    popupOpen = false;
+    reportModal.classList.remove('show');
+    pendingDetection = null;
+  }
+
+  modalNoBtn.onclick = () => closeReportPopup();
+
+  modalYesBtn.onclick = async () => {
+    modalYesBtn.disabled = true;
+    modalNoBtn.disabled = true;
+    modalStatus.textContent = 'Getting location…';
+    const loc = await getLocation();
+    modalStatus.textContent = 'Filing report…';
+    await new Promise(r => setTimeout(r, 500));
+    fileReport(pendingDetection, loc);
+    modalStatus.textContent = 'Report filed';
+    setTimeout(closeReportPopup, 700);
+  };
+
+  function simulatedLocation(){
+    const baseLat = 37.7749, baseLng = -122.4194;
+    return {
+      lat: baseLat + (Math.random() - 0.5) * 0.02,
+      lng: baseLng + (Math.random() - 0.5) * 0.02
+    };
+  }
+
+  function getLocation(){
+    return new Promise((resolve) => {
+      if(!navigator.geolocation){ resolve(simulatedLocation()); return; }
+      const timer = setTimeout(() => resolve(simulatedLocation()), 3000);
+      navigator.geolocation.getCurrentPosition(
+        (pos) => { clearTimeout(timer); resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }); },
+        () => { clearTimeout(timer); resolve(simulatedLocation()); },
+        { timeout: 3000 }
+      );
+    });
+  }
+
+  function fileReport(detection, loc){
+    reportSeq++;
+    const id = 'RW-2026-' + String(reportSeq).padStart(4, '0');
+    const locationText = locationInput.value || 'Unspecified location';
+    const complaintText =
+`COMPLAINT ${id}
+Filed: ${detection.timestamp}
+Location: ${locationText}
+GPS: ${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}
+Detection confidence: ${detection.confidence.toFixed(2)}
+Description: A pothole was automatically detected by a RoadWatch camera at the
+above location. Requesting inspection and repair by the Dept. of Public Works.`;
+
+    reports.unshift({
+      id,
+      timestamp: detection.timestamp,
+      location: locationText,
+      lat: loc.lat,
+      lng: loc.lng,
+      confidence: detection.confidence,
+      thumb: detection.thumb,
+      status: 'Pending Review',
+      complaintText
+    });
+    if(currentPage === 'portal') renderReports();
+  }
+
+  function renderReports(){
+    const list = document.getElementById('reportsList');
+    const empty = document.getElementById('emptyState');
+    list.innerHTML = '';
+    document.getElementById('statDetected').textContent = detectionCount;
+    document.getElementById('statTotal').textContent = reports.length;
+    document.getElementById('statPending').textContent = reports.filter(r=>r.status==='Pending Review').length;
+    document.getElementById('statRepaired').textContent = reports.filter(r=>r.status==='Repaired').length;
+
+    if(reports.length === 0){
+      empty.style.display = '';
+      return;
+    }
+    empty.style.display = 'none';
+
+    reports.forEach(r => {
+      const row = document.createElement('div');
+      row.className = 'report-row';
+
+      const top = document.createElement('div');
+      top.className = 'report-top';
+      top.innerHTML = `
+        <img src="${r.thumb}">
+        <div class="report-main">
+          <div class="report-id">${r.id}</div>
+          <div class="report-loc">${escapeHtml(r.location)}</div>
+          <div class="report-meta">Filed ${r.timestamp} · confidence ${r.confidence.toFixed(2)} · GPS ${r.lat.toFixed(4)}, ${r.lng.toFixed(4)}</div>
+        </div>
+      `;
+      const select = document.createElement('select');
+      select.className = 'status-select';
+      ['Pending Review','Crew Dispatched','Repaired'].forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s; opt.textContent = s;
+        if(s === r.status) opt.selected = true;
+        select.appendChild(opt);
+      });
+      select.onchange = () => { r.status = select.value; renderReports(); };
+      top.appendChild(select);
+
+      const complaint = document.createElement('div');
+      complaint.className = 'complaint-box';
+      complaint.textContent = r.complaintText;
+
+      row.appendChild(top);
+      row.appendChild(complaint);
+      list.appendChild(row);
+    });
+  }
+
+  function escapeHtml(str){
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+})();
+</script>
+</body>
+</html>
