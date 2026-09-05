@@ -1,4 +1,4 @@
-# Pothole Detection
+# Pothole Detection   
 
 Pothole detection pipeline: dataset preparation, YOLOv8 training, camera frame
 capture, a Streamlit reporting app, and a browser-based demo.

@@ -1,4 +1,4 @@
-from ultralytics import YOLO
+from ultralytics import YOLO 
 
 DATA_YAML = "pothole_dataset/data.yaml"
 EPOCHS = 100
