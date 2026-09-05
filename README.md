@@ -8,6 +8,7 @@ capture, a Streamlit reporting app, and a browser-based demo.
 ```
 dataset/    prepare_dataset.py        build a YOLO-format dataset
 training/   train_model.py            fine-tune YOLOv8 on the dataset
+training/   train_on_colab.ipynb      same training, runnable on a free Colab GPU
 capture/    capture_camera_frames.py  grab frames from a live camera
 app/        streamlit_app.py          detection + reporting dashboard
 web-demo/   index.html                self-contained browser demo
@@ -40,6 +41,8 @@ python training/train_model.py
 
 Weights are written to `runs/detect/pothole_detector/weights/best.pt`.
 
+No local GPU? Open [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/KripaAdhikari351/pothole-detection/blob/main/training/train_on_colab.ipynb) and run the cells top to bottom on Colab's free GPU. It downloads a public pothole dataset from Roboflow Universe, trains, and gives you `best.pt` to download.
+
 ## Model weights
 
 `best.pt` is a generated artifact, not source code, so it isn't committed to
@@ -48,14 +51,19 @@ and it's specific to whatever dataset it was trained on. `app/streamlit_app.py`
 expects it at `runs/detect/pothole_detector/weights/best.pt` and will show a
 clear error instead of crashing if it isn't there yet.
 
-To get a working model without training from scratch:
+Once you have a trained `best.pt`:
 
-- Run `training/train_model.py` yourself against a real pothole dataset, or
-- Download a pretrained pothole YOLOv8 model from Roboflow Universe or
-  Hugging Face Hub and point `MODEL_PATH` in `streamlit_app.py` at it, or
-- Attach your own trained `best.pt` to a GitHub Release on this repo (Releases
-  support large binary files, unlike the repo itself) and link it here once
-  it's up.
+1. Place it at `runs/detect/pothole_detector/weights/best.pt` to run
+   `streamlit_app.py` locally, or
+2. Attach it to a [GitHub Release](https://github.com/KripaAdhikari351/pothole-detection/releases/new)
+   on this repo (Releases support large binary files, unlike the repo
+   itself) so others don't have to train their own. Once uploaded, download
+   it with:
+   ```
+   mkdir -p runs/detect/pothole_detector/weights
+   curl -L -o runs/detect/pothole_detector/weights/best.pt <release_asset_url>
+   ```
+   replacing `<release_asset_url>` with the asset link from the release page.
 
 ## Camera capture
 
